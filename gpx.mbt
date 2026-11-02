@@ -14,8 +14,13 @@ fn gpx_properties(node : XmlNode) -> Map[String, Json] {
   put_text_fields(properties, node, [
     "name", "cmt", "desc", "type", "time", "keywords",
   ])
-  if node.value("sym") is Some(value) {
-    properties.set("sym", json_string(value))
+  for child in node.all_descendants() {
+    if child.name.split_once(":") is Some((_, _)) {
+      properties.set(
+        child.name.replace(old=":", new="_"),
+        json_string(child.text_content().trim().to_owned()),
+      )
+    }
   }
   let links = []
   for link in node.descendants("link") {
@@ -175,9 +180,7 @@ fn gpx_track(node : XmlNode) -> Json? {
       }
     }
   }
-  if !coordinate_properties.is_empty() {
-    properties.set("coordinateProperties", Json::object(coordinate_properties))
-  }
+  properties.set("coordinateProperties", Json::object(coordinate_properties))
   let geometry = if lines.length() == 1 {
     Json::object({ "type": json_string("LineString"), "coordinates": lines[0] })
   } else {
@@ -200,7 +203,15 @@ fn gpx_route(node : XmlNode) -> Json? {
 ///|
 fn gpx_waypoint(node : XmlNode) -> Json? {
   match gpx_position(node) {
-    Some(position) => Some(feature(geo_point(position), gpx_properties(node)))
+    Some(position) => {
+      let properties = gpx_properties(node)
+      if node.value("sym") is Some(value) {
+        if value != "" {
+          properties.set("sym", json_string(value))
+        }
+      }
+      Some(feature(geo_point(position), properties))
+    }
     None => None
   }
 }
@@ -209,22 +220,5 @@ fn gpx_waypoint(node : XmlNode) -> Json? {
 /// Convert a GPX document to a GeoJSON FeatureCollection. Tracks precede
 /// routes, which precede waypoints, matching @tmcw/togeojson 7.1.3.
 pub fn gpx(source : String) -> Json raise {
-  let document = parse_xml(source)
-  let features : Array[Json] = []
-  for node in document.descendants("trk") {
-    if gpx_track(node) is Some(value) {
-      features.push(value)
-    }
-  }
-  for node in document.descendants("rte") {
-    if gpx_route(node) is Some(value) {
-      features.push(value)
-    }
-  }
-  for node in document.descendants("wpt") {
-    if gpx_waypoint(node) is Some(value) {
-      features.push(value)
-    }
-  }
-  feature_collection(features)
+  feature_collection(gpx_gen(source).collect())
 }

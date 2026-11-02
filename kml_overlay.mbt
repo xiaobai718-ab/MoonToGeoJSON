@@ -6,12 +6,13 @@ fn kml_rotate_position(
   cy : Double,
   angle : Double,
 ) -> Json {
-  let radians = angle * 3.141592653589793 / 180.0
   let dx = x - cx
   let dy = y - cy
+  let distance = (@math.pow(dy, 2.0) + @math.pow(dx, 2.0)).sqrt()
+  let radians = @math.atan2(dy, dx) + angle * (3.141592653589793 / 180.0)
   json_position(
-    cx + @math.cos(radians) * dx - @math.sin(radians) * dy,
-    cy + @math.sin(radians) * dx + @math.cos(radians) * dy,
+    cx + @math.cos(radians) * distance,
+    cy + @math.sin(radians) * distance,
     None,
   )
 }
@@ -134,9 +135,18 @@ fn kml_folder_children(
     match local_name(child.name) {
       "Folder" => {
         let meta = object()
-        put_text_fields(meta, child, [
-          "name", "visibility", "open", "address", "description", "phoneNumber",
-        ])
+        for field in child.children {
+          match field.name {
+            "name"
+            | "visibility"
+            | "open"
+            | "address"
+            | "description"
+            | "phoneNumber" =>
+              meta.set(field.name, json_string(field.text_content()))
+            _ => ()
+          }
+        }
         result.push(
           Json::object({
             "type": json_string("folder"),

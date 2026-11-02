@@ -4,11 +4,17 @@ package "xiaobai718-ab/moontogeojson"
 // Values
 pub fn gpx(String) -> Json raise
 
+pub fn gpx_gen(String) -> Iter[Json] raise
+
 pub fn kml(String, skip_null_geometry? : Bool) -> Json raise
+
+pub fn kml_gen(String, skip_null_geometry? : Bool) -> Iter[Json] raise
 
 pub fn kml_with_folders(String, skip_null_geometry? : Bool) -> Json raise
 
 pub fn tcx(String) -> Json raise
+
+pub fn tcx_gen(String) -> Iter[Json] raise
 
 // Errors
 

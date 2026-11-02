@@ -25,4 +25,5 @@ description = "KML, GPX and TCX to GeoJSON conversion in pure MoonBit"
 
 import {
   "Milky2018/xml@0.6.1",
+  "moonbitlang/async@0.22.4",
 }

@@ -154,12 +154,12 @@ fn kml_properties(
     properties.set("visibility", Json::boolean(value != "0"))
   }
   if node.first("description") is Some(description) {
-    if description.has_cdata {
+    if description.has_cdata && description.cdata_text != "" {
       properties.set(
         "description",
         Json::object({
           "@type": json_string("html"),
-          "value": json_string(description.text),
+          "value": json_string(description.cdata_text),
         }),
       )
     }
@@ -235,26 +235,5 @@ fn kml_placemark(
 /// Convert KML Placemarks to a GeoJSON FeatureCollection. Null geometries are
 /// retained by default, matching the upstream library.
 pub fn kml(source : String, skip_null_geometry~ : Bool = false) -> Json raise {
-  let document = parse_xml(source)
-  let styles = kml_style_map(document)
-  let schema = kml_schema(document)
-  let features : Array[Json] = []
-  for placemark in document.descendants("Placemark") {
-    if kml_placemark(placemark, styles, schema, skip_null_geometry)
-      is Some(value) {
-      features.push(value)
-    }
-  }
-  for overlay in document.descendants("GroundOverlay") {
-    if kml_ground_overlay(overlay, styles, schema, skip_null_geometry)
-      is Some(value) {
-      features.push(value)
-    }
-  }
-  for link in document.descendants("NetworkLink") {
-    if kml_network_link(link, styles, schema, skip_null_geometry) is Some(value) {
-      features.push(value)
-    }
-  }
-  feature_collection(features)
+  feature_collection(kml_gen(source, skip_null_geometry~).collect())
 }

@@ -187,3 +187,15 @@ test "KML rotated overlay changes polygon coordinates" {
   )
   assert_true(normal != rotated)
 }
+
+///|
+test "generators match collection APIs" {
+  let kml_source = "<kml><Placemark><Point><coordinates>1,2</coordinates></Point></Placemark><GroundOverlay><LatLonBox><west>0</west><south>0</south><east>1</east><north>1</north></LatLonBox></GroundOverlay></kml>"
+  let gpx_source = "<gpx><wpt lon='1' lat='2'/></gpx>"
+  let tcx_source = "<TrainingCenterDatabase/>"
+  assert_eq(feature_collection(kml_gen(kml_source).collect()), kml(kml_source))
+  assert_eq(feature_collection(gpx_gen(gpx_source).collect()), gpx(gpx_source))
+  assert_eq(feature_collection(tcx_gen(tcx_source).collect()), tcx(tcx_source))
+  let skip_source = "<kml><Placemark/><Placemark><Point><coordinates>1,2</coordinates></Point></Placemark></kml>"
+  assert_eq(kml_gen(skip_source, skip_null_geometry=true).collect().length(), 1)
+}

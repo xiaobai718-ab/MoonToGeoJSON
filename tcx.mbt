@@ -157,17 +157,5 @@ fn tcx_lap(node : XmlNode) -> Json? {
 ///|
 /// Convert a Garmin Training Center XML document to GeoJSON.
 pub fn tcx(source : String) -> Json raise {
-  let document = parse_xml(source)
-  let features : Array[Json] = []
-  for lap in document.descendants("Lap") {
-    if tcx_lap(lap) is Some(value) {
-      features.push(value)
-    }
-  }
-  for courses in document.descendants("Courses") {
-    if tcx_lap(courses) is Some(value) {
-      features.push(value)
-    }
-  }
-  feature_collection(features)
+  feature_collection(tcx_gen(source).collect())
 }

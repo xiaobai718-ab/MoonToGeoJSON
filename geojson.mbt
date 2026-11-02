@@ -107,7 +107,9 @@ fn put_text_fields(
 ) -> Unit {
   for field in fields {
     if node.value(field) is Some(value) {
-      properties.set(field, json_string(value))
+      if value != "" {
+        properties.set(field, json_string(value))
+      }
     }
   }
 }

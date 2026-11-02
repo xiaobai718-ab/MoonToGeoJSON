@@ -6,12 +6,22 @@ priv struct XmlNode {
   attrs : Map[String, String]
   children : Array[XmlNode]
   mut text : String
+  mut all_text : String
+  mut cdata_text : String
   mut has_cdata : Bool
 }
 
 ///|
 fn xml_node(name : String, attrs : Map[String, String]) -> XmlNode {
-  { name, attrs, children: [], text: "", has_cdata: false, }
+  {
+    name,
+    attrs,
+    children: [],
+    text: "",
+    all_text: "",
+    cdata_text: "",
+    has_cdata: false,
+  }
 }
 
 ///|
@@ -38,11 +48,18 @@ fn parse_xml(source : String) -> XmlNode raise {
       @xml.Text(value) => {
         let current = stack[stack.length() - 1]
         current.text = current.text + value
+        for ancestor in stack {
+          ancestor.all_text = ancestor.all_text + value
+        }
       }
       @xml.CData(value) => {
         let current = stack[stack.length() - 1]
         current.text = current.text + value
+        current.cdata_text = current.cdata_text + value
         current.has_cdata = true
+        for ancestor in stack {
+          ancestor.all_text = ancestor.all_text + value
+        }
       }
       @xml.Eof => break
       _ => ()
@@ -90,17 +107,23 @@ fn XmlNode::descendants(self : XmlNode, name : String) -> Array[XmlNode] {
 }
 
 ///|
+fn XmlNode::all_descendants(self : XmlNode) -> Array[XmlNode] {
+  let found : Array[XmlNode] = []
+  for child in self.children {
+    found.push(child)
+    found.append(child.all_descendants())
+  }
+  found
+}
+
+///|
 fn XmlNode::value(self : XmlNode, name : String) -> String? {
   self.first(name).map(node => node.text_content())
 }
 
 ///|
 fn XmlNode::text_content(self : XmlNode) -> String {
-  let mut value = self.text
-  for child in self.children {
-    value = value + child.text_content()
-  }
-  value
+  self.all_text
 }
 
 ///|

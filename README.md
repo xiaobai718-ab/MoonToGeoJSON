@@ -7,7 +7,7 @@ The library accepts XML text and returns MoonBit `Json` values. The KML API supp
 ## Requirements
 
 - MoonBit compiler `moonc` 0.10.16 or newer
-- Internet access for the first `moon update` to fetch `Milky2018/xml@0.6.1`
+- Internet access for the first `moon update` to fetch `Milky2018/xml@0.6.1` and `moonbitlang/async@0.22.4` (the latter is used by the native file CLI)
 
 ## Install
 
@@ -44,6 +44,16 @@ moon run cmd/main --target native
 
 It prints a GeoJSON `FeatureCollection` containing one Point at `[116.397, 39.908]`.
 
+Convert a local file with the native CLI:
+
+```sh
+moon run cmd/convert --target native -- kml input.kml
+moon run cmd/convert --target native -- gpx route.gpx
+moon run cmd/convert --target native -- tcx activity.tcx
+```
+
+The CLI writes the converted JSON to standard output. `kml-folders` and `kml-folders-skip` are also accepted as formats.
+
 The public conversion functions are:
 
 | Function | Input | Output |
@@ -52,6 +62,9 @@ The public conversion functions are:
 | `kml_with_folders(source, skip_null_geometry?=false)` | KML XML string | Nested root/folder tree with GeoJSON features |
 | `gpx(source)` | GPX XML string | GeoJSON FeatureCollection |
 | `tcx(source)` | TCX XML string | GeoJSON FeatureCollection |
+| `kml_gen(source, skip_null_geometry?=false)` | KML XML string | `Iter[Json]` yielding one feature at a time |
+| `gpx_gen(source)` | GPX XML string | `Iter[Json]` yielding one feature at a time |
+| `tcx_gen(source)` | TCX XML string | `Iter[Json]` yielding one feature at a time |
 
 Malformed XML raises an XML parser error. Invalid or incomplete geospatial coordinates are omitted; KML placemarks without valid geometry have `geometry: null` unless `skip_null_geometry=true`.
 
@@ -67,6 +80,16 @@ moon test --target js
 moon check --target wasm-gc
 ```
 
+To rerun the upstream v7.1.3 parity suite (62 fixtures and 132 snapshots), clone the reference source into the ignored `.upstream` directory and run:
+
+```sh
+git clone --depth 1 --branch v7.1.3 https://github.com/placemark/togeojson.git .upstream
+moon build --target native
+node tools/compare-upstream.mjs
+```
+
+The comparison covers GeoJSON collections and both KML folder modes. It is also part of CI. The current result is **132/132 matching snapshots**.
+
 On Windows, the current `moonc` can fail to create output in very long paths. If your checkout is in a long path, map the project to a short drive before running the same commands:
 
 ```powershell
@@ -77,7 +100,7 @@ moon -C M:\ run cmd/main --target native
 
 Replace the path and drive letter as needed. The mapping does not move project files.
 
-The `.upstream` directory is an ignored local reference checkout and is not required to build. The port currently returns complete `Json` collections; the upstream JavaScript iterator API is not present. The full upstream fixture corpus has not yet been verified for exact parity. Check the tests and commit history for the implemented behavior; do not assume byte-for-byte parity for every upstream fixture yet.
+The `.upstream` directory is an ignored local reference checkout and is not required to build. The source is a MoonBit port, so the public API takes XML strings rather than JavaScript DOM objects and returns `Json`/`Iter[Json]` rather than TypeScript GeoJSON types. For behavior covered by upstream v7.1.3 snapshots, output matches exactly.
 
 ## License and attribution
 

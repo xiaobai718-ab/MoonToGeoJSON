@@ -1,0 +1,10 @@
+import {
+  "xiaobai718-ab/moontogeojson" @lib,
+  "moonbitlang/async",
+  "moonbitlang/async/fs",
+  "moonbitlang/core/env",
+}
+
+pkgtype(kind: "executable")
+
+supported_targets = "native"

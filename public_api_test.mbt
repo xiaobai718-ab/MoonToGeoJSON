@@ -20,4 +20,18 @@ test "public KML, GPX and TCX entry points" {
   } else {
     fail("expected folder root")
   }
+  assert_eq(
+    @moontogeojson.kml_gen("<kml><Placemark/></kml>").collect().length(),
+    1,
+  )
+  assert_eq(
+    @moontogeojson.gpx_gen("<gpx><wpt lon='1' lat='2'/></gpx>")
+    .collect()
+    .length(),
+    1,
+  )
+  assert_eq(
+    @moontogeojson.tcx_gen("<TrainingCenterDatabase/>").collect().length(),
+    0,
+  )
 }
