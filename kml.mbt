@@ -55,6 +55,24 @@ fn kml_style(node : XmlNode) -> Map[String, Json] {
         if style.value("href") is Some(href) {
           properties.set("icon", json_string(href))
         }
+        if style.first("hotSpot") is Some(hotspot) {
+          match (hotspot.attribute_number("x"), hotspot.attribute_number("y")) {
+            (Some(x), Some(y)) => {
+              properties.set(
+                "icon-offset",
+                Json::array([json_number(x), json_number(y)]),
+              )
+              properties.set(
+                "icon-offset-units",
+                Json::array([
+                  json_string(hotspot.attr("xunits").unwrap_or("")),
+                  json_string(hotspot.attr("yunits").unwrap_or("")),
+                ]),
+              )
+            }
+            _ => ()
+          }
+        }
       }
       if tag == "PolyStyle" {
         if style.value("fill") is Some("0") {
@@ -77,6 +95,14 @@ fn kml_style_map(document : XmlNode) -> Map[String, Map[String, Json]] {
       styles.set("#" + id, kml_style(node))
     }
   }
+  for cascading in document.descendants("CascadingStyle") {
+    if cascading.first("Style") is Some(style) {
+      match (cascading.attr("kml:id"), cascading.attr("id")) {
+        (Some(id), _) | (_, Some(id)) => styles.set("#" + id, kml_style(style))
+        _ => ()
+      }
+    }
+  }
   for node in document.descendants("StyleMap") {
     if node.attr("id") is Some(id) {
       if node.value("styleUrl") is Some(url) {
@@ -91,9 +117,34 @@ fn kml_style_map(document : XmlNode) -> Map[String, Map[String, Json]] {
 }
 
 ///|
+fn kml_schema(document : XmlNode) -> Map[String, String] {
+  let schema : Map[String, String] = Map([])
+  for field in document.descendants("SimpleField") {
+    if field.attr("name") is Some(name) {
+      schema.set(name, field.attr("type").unwrap_or("string"))
+    }
+  }
+  schema
+}
+
+///|
+fn kml_schema_value(value : String, kind : String) -> Json {
+  match kind {
+    "int" | "uint" | "short" | "ushort" | "float" | "double" =>
+      match parse_number(value) {
+        Some(number) => json_number(number)
+        None => Json::null()
+      }
+    "bool" => Json::boolean(value != "")
+    _ => json_string(value)
+  }
+}
+
+///|
 fn kml_properties(
   node : XmlNode,
   styles : Map[String, Map[String, Json]],
+  schema : Map[String, String],
 ) -> Map[String, Json] {
   let properties = object()
   put_text_fields(properties, node, [
@@ -129,16 +180,18 @@ fn kml_properties(
   }
   if node.first("ExtendedData") is Some(extended) {
     for data in extended.descendants("Data") {
-      if data.attr("name") is Some(name) {
-        if data.value("value") is Some(value) {
-          properties.set(name, json_string(value))
-        }
-      }
+      let name = data.attr("name").unwrap_or("")
+      properties.set(name, json_string(data.value("value").unwrap_or("")))
     }
     for data in extended.descendants("SimpleData") {
-      if data.attr("name") is Some(name) {
-        properties.set(name, json_string(data.text))
-      }
+      let name = data.attr("name").unwrap_or("")
+      properties.set(
+        name,
+        kml_schema_value(
+          data.text_content(),
+          schema.get(name).unwrap_or("string"),
+        ),
+      )
     }
   }
   if node.first("TimeSpan") is Some(span) {
@@ -157,6 +210,7 @@ fn kml_properties(
 fn kml_placemark(
   node : XmlNode,
   styles : Map[String, Map[String, Json]],
+  schema : Map[String, String],
   skip_null_geometry : Bool,
 ) -> Json? {
   let times : Array[Json] = []
@@ -164,7 +218,7 @@ fn kml_placemark(
   if geometry == Json::null() && skip_null_geometry {
     return None
   }
-  let properties = kml_properties(node, styles)
+  let properties = kml_properties(node, styles, schema)
   if !times.is_empty() {
     let value = if times.length() == 1 { times[0] } else { Json::array(times) }
     properties.set("coordinateProperties", Json::object({ "times": value }))
@@ -183,19 +237,22 @@ fn kml_placemark(
 pub fn kml(source : String, skip_null_geometry~ : Bool = false) -> Json raise {
   let document = parse_xml(source)
   let styles = kml_style_map(document)
+  let schema = kml_schema(document)
   let features : Array[Json] = []
   for placemark in document.descendants("Placemark") {
-    if kml_placemark(placemark, styles, skip_null_geometry) is Some(value) {
+    if kml_placemark(placemark, styles, schema, skip_null_geometry)
+      is Some(value) {
       features.push(value)
     }
   }
   for overlay in document.descendants("GroundOverlay") {
-    if kml_ground_overlay(overlay, styles, skip_null_geometry) is Some(value) {
+    if kml_ground_overlay(overlay, styles, schema, skip_null_geometry)
+      is Some(value) {
       features.push(value)
     }
   }
   for link in document.descendants("NetworkLink") {
-    if kml_network_link(link, styles, skip_null_geometry) is Some(value) {
+    if kml_network_link(link, styles, schema, skip_null_geometry) is Some(value) {
       features.push(value)
     }
   }

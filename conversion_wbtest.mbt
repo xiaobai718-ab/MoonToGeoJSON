@@ -155,3 +155,35 @@ test "TCX extended arrays" {
     }
   }
 }
+
+///|
+test "KML schema typing and icon hotspot" {
+  let source = "<kml><Document><Schema><SimpleField name='elevation' type='double'/><SimpleField name='open' type='bool'/></Schema><Placemark><Style><IconStyle><hotSpot x='3' y='4' xunits='pixels' yunits='insetPixels'/></IconStyle></Style><ExtendedData><SchemaData><SimpleData name='elevation'>12.5</SimpleData><SimpleData name='open'>false</SimpleData></SchemaData></ExtendedData><Point><coordinates>1,2</coordinates></Point></Placemark></Document></kml>"
+  let result = kml(source)
+  if result is Object(root) {
+    if root.get("features") is Some(Array(features)) {
+      if features[0] is Object(item) {
+        if item.get("properties") is Some(Object(properties)) {
+          assert_eq(properties.get("elevation"), Some(json_number(12.5)))
+          assert_eq(properties.get("open"), Some(Json::boolean(true)))
+          assert_eq(properties.get("icon-offset"), Some(@json.parse("[3,4]")))
+          assert_eq(
+            properties.get("icon-offset-units"),
+            Some(@json.parse("[\"pixels\",\"insetPixels\"]")),
+          )
+        }
+      }
+    }
+  }
+}
+
+///|
+test "KML rotated overlay changes polygon coordinates" {
+  let normal = kml(
+    "<kml><GroundOverlay><LatLonBox><west>0</west><south>0</south><east>2</east><north>2</north></LatLonBox></GroundOverlay></kml>",
+  )
+  let rotated = kml(
+    "<kml><GroundOverlay><LatLonBox><west>0</west><south>0</south><east>2</east><north>2</north><rotation>45</rotation></LatLonBox></GroundOverlay></kml>",
+  )
+  assert_true(normal != rotated)
+}

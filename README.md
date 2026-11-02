@@ -2,7 +2,7 @@
 
 Convert KML, GPX and TCX XML into GeoJSON using MoonBit. This project ports the core conversion behavior of [@tmcw/togeojson 7.1.3](https://github.com/placemark/togeojson/tree/v7.1.3) to MoonBit. XML parsing uses [`Milky2018/xml`](https://mooncakes.io/docs/Milky2018/xml).
 
-The library accepts XML text and returns MoonBit `Json` values. The KML API supports placemarks, basic styles, extended data, timestamps, GroundOverlay, NetworkLink, folder trees and `gx:Track`. GPX supports tracks, routes, waypoints, times and trackpoint extensions. TCX supports laps, courses, time and heart-rate arrays, lap metrics, cadence, speed and watts.
+The library accepts XML text and returns MoonBit `Json` values. The KML API supports placemarks, styles, schema typed extended data, timestamps, GroundOverlay, NetworkLink, folder trees and `gx:Track`. GPX supports tracks, routes, waypoints, times and trackpoint extensions. TCX supports laps, courses, time and heart-rate arrays, lap metrics, cadence, speed and watts.
 
 ## Requirements
 
@@ -67,7 +67,7 @@ moon test --target js
 moon check --target wasm-gc
 ```
 
-The `.upstream` directory is an ignored local reference checkout and is not required to build. The port currently returns complete `Json` collections; the upstream JavaScript iterator API is not present. Some uncommon KML styles, schema typing and rotated overlays are still being worked on. Check the tests and commit history for the implemented behavior; do not assume byte-for-byte parity for every upstream fixture yet.
+The `.upstream` directory is an ignored local reference checkout and is not required to build. The port currently returns complete `Json` collections; the upstream JavaScript iterator API is not present. The full upstream fixture corpus has not yet been verified for exact parity. Check the tests and commit history for the implemented behavior; do not assume byte-for-byte parity for every upstream fixture yet.
 
 ## License and attribution
 

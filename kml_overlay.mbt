@@ -1,4 +1,22 @@
 ///|
+fn kml_rotate_position(
+  x : Double,
+  y : Double,
+  cx : Double,
+  cy : Double,
+  angle : Double,
+) -> Json {
+  let radians = angle * 3.141592653589793 / 180.0
+  let dx = x - cx
+  let dy = y - cy
+  json_position(
+    cx + @math.cos(radians) * dx - @math.sin(radians) * dy,
+    cy + @math.sin(radians) * dx + @math.cos(radians) * dy,
+    None,
+  )
+}
+
+///|
 fn kml_box(box : XmlNode) -> (Json, Json)? {
   match
     (
@@ -8,12 +26,15 @@ fn kml_box(box : XmlNode) -> (Json, Json)? {
       box.number("north"),
     ) {
     (Some(west), Some(south), Some(east), Some(north)) => {
+      let cx = (west + east) / 2.0
+      let cy = (south + north) / 2.0
+      let angle = box.number("rotation").unwrap_or(0.0)
       let ring = [
-        json_position(west, north, None),
-        json_position(east, north, None),
-        json_position(east, south, None),
-        json_position(west, south, None),
-        json_position(west, north, None),
+        kml_rotate_position(west, north, cx, cy, angle),
+        kml_rotate_position(east, north, cx, cy, angle),
+        kml_rotate_position(east, south, cx, cy, angle),
+        kml_rotate_position(west, south, cx, cy, angle),
+        kml_rotate_position(west, north, cx, cy, angle),
       ]
       let bbox = Json::array([
         json_number(west),
@@ -31,6 +52,7 @@ fn kml_box(box : XmlNode) -> (Json, Json)? {
 fn kml_ground_overlay(
   node : XmlNode,
   styles : Map[String, Map[String, Json]],
+  schema : Map[String, String],
   skip_null_geometry : Bool,
 ) -> Json? {
   let mut geometry = Json::null()
@@ -50,7 +72,7 @@ fn kml_ground_overlay(
   if geometry == Json::null() && skip_null_geometry {
     return None
   }
-  let properties = kml_properties(node, styles)
+  let properties = kml_properties(node, styles, schema)
   properties.set("@geometry-type", json_string("groundoverlay"))
   if node.value("href") is Some(href) {
     properties.set("icon", json_string(href))
@@ -62,6 +84,7 @@ fn kml_ground_overlay(
 fn kml_network_link(
   node : XmlNode,
   styles : Map[String, Map[String, Json]],
+  schema : Map[String, String],
   skip_null_geometry : Bool,
 ) -> Json? {
   let mut geometry = Json::null()
@@ -75,7 +98,7 @@ fn kml_network_link(
   if geometry == Json::null() && skip_null_geometry {
     return None
   }
-  let properties = kml_properties(node, styles)
+  let properties = kml_properties(node, styles, schema)
   properties.set("@geometry-type", json_string("networklink"))
   put_text_fields(properties, node, ["refreshVisibility", "flyToView"])
   if node.first("Link") is Some(link) {
@@ -103,6 +126,7 @@ fn kml_network_link(
 fn kml_folder_children(
   node : XmlNode,
   styles : Map[String, Map[String, Json]],
+  schema : Map[String, String],
   skip_null_geometry : Bool,
 ) -> Array[Json] {
   let result : Array[Json] = []
@@ -118,24 +142,30 @@ fn kml_folder_children(
             "type": json_string("folder"),
             "meta": Json::object(meta),
             "children": Json::array(
-              kml_folder_children(child, styles, skip_null_geometry),
+              kml_folder_children(child, styles, schema, skip_null_geometry),
             ),
           }),
         )
       }
       "Placemark" =>
-        if kml_placemark(child, styles, skip_null_geometry) is Some(value) {
+        if kml_placemark(child, styles, schema, skip_null_geometry)
+          is Some(value) {
           result.push(value)
         }
       "GroundOverlay" =>
-        if kml_ground_overlay(child, styles, skip_null_geometry) is Some(value) {
+        if kml_ground_overlay(child, styles, schema, skip_null_geometry)
+          is Some(value) {
           result.push(value)
         }
       "NetworkLink" =>
-        if kml_network_link(child, styles, skip_null_geometry) is Some(value) {
+        if kml_network_link(child, styles, schema, skip_null_geometry)
+          is Some(value) {
           result.push(value)
         }
-      _ => result.append(kml_folder_children(child, styles, skip_null_geometry))
+      _ =>
+        result.append(
+          kml_folder_children(child, styles, schema, skip_null_geometry),
+        )
     }
   }
   result
@@ -149,10 +179,11 @@ pub fn kml_with_folders(
 ) -> Json raise {
   let document = parse_xml(source)
   let styles = kml_style_map(document)
+  let schema = kml_schema(document)
   Json::object({
     "type": json_string("root"),
     "children": Json::array(
-      kml_folder_children(document, styles, skip_null_geometry),
+      kml_folder_children(document, styles, schema, skip_null_geometry),
     ),
   })
 }
