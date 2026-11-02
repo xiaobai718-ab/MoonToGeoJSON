@@ -6,10 +6,10 @@ import vm from 'node:vm';
 import { execFileSync } from 'node:child_process';
 
 const root = path.resolve(import.meta.dirname, '..');
+const moonRoot = process.env.MOONTOGEOJSON_MOON_ROOT || root;
 const snapshots = fs.readFileSync(path.join(root, '.upstream/lib/__snapshots__/index.test.ts.snap'), 'utf8');
 const fixtureDir = path.join(root, '.upstream/test/data');
-const binary = process.platform === 'win32' ? 'convert.exe' : 'convert';
-const converter = path.join(root, '_build/native/debug/build/cmd/convert', binary);
+const moon = process.platform === 'win32' ? 'moon.exe' : 'moon';
 const pattern = /exports\[`toGeoJSON > ([^`]+) ([123])`\] = `\r?\n([\s\S]*?)\r?\n`;/g;
 const expected = new Map();
 function parseSnapshot(raw) {
@@ -67,7 +67,7 @@ for (const name of fs.readdirSync(fixtureDir).filter(file => /\.(kml|gpx|tcx)$/.
     }
     let actual;
     try {
-      const raw = execFileSync(converter, [kind, path.join(fixtureDir, name)], { encoding: 'utf8', maxBuffer: 50 * 1024 * 1024 });
+      const raw = execFileSync(moon, ['-C', moonRoot, 'run', 'cmd/convert', '--target', 'native', '--', kind, path.join(fixtureDir, name)], { encoding: 'utf8', maxBuffer: 50 * 1024 * 1024 });
       actual = JSON.parse(raw);
     } catch (error) {
       failures.push(`${name}#${index}: converter failed: ${error.message}`);

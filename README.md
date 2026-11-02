@@ -96,6 +96,8 @@ On Windows, the current `moonc` can fail to create output in very long paths. If
 subst M: 'E:\AAAAAAAAAAAAAAAAAAAAAA\2026.10\10月黑客松\xiaobai\moontogeojson'
 moon -C M:\ test --target native
 moon -C M:\ run cmd/main --target native
+$env:MOONTOGEOJSON_MOON_ROOT='M:\'
+node tools/compare-upstream.mjs
 ```
 
 Replace the path and drive letter as needed. The mapping does not move project files.
