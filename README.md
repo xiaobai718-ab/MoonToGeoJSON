@@ -55,6 +55,14 @@ moon run cmd/convert --target native -- route.gpx
 
 The CLI writes the converted JSON to standard output. When the format is omitted, it uses the `.kml`, `.gpx` or `.tcx` file extension. `kml-folders` and `kml-folders-skip` are also accepted as explicit formats. Errors go to standard error and return a nonzero exit status.
 
+Three small input files are included so the conversion can be reproduced immediately:
+
+```sh
+moon run cmd/convert --target native -- examples/places.kml
+moon run cmd/convert --target native -- examples/route.gpx
+moon run cmd/convert --target native -- examples/activity.tcx
+```
+
 The public conversion functions are:
 
 | Function | Input | Output |

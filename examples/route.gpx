@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="MoonToGeoJSON" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk>
+    <name>Morning route</name>
+    <trkseg>
+      <trkpt lat="39.908" lon="116.397"><ele>50</ele><time>2026-11-02T00:00:00Z</time></trkpt>
+      <trkpt lat="39.910" lon="116.400"><ele>52</ele><time>2026-11-02T00:02:00Z</time></trkpt>
+    </trkseg>
+  </trk>
+  <wpt lat="39.908" lon="116.397"><name>Start</name></wpt>
+</gpx>
