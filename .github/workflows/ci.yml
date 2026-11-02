@@ -35,6 +35,8 @@ jobs:
         run: moon check --target wasm-gc
       - name: Run example
         run: moon run cmd/main --target native
+      - name: Smoke test file conversion CLI
+        run: node tools/smoke-cli.mjs
       - name: Compare upstream v7.1.3 fixtures
         run: |
           git clone --depth 1 --branch v7.1.3 https://github.com/placemark/togeojson.git .upstream

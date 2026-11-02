@@ -99,6 +99,8 @@ node tools/compare-upstream.mjs
 
 The comparison covers GeoJSON collections and both KML folder modes. It is also part of CI. The current result is **132/132 matching snapshots**.
 
+The smaller `node tools/smoke-cli.mjs` check runs the included files through the native CLI and verifies success output and failure exit codes. CI runs it before the upstream comparison.
+
 On Windows, the current `moonc` can fail to create output in very long paths. If your checkout is in a long path, map the project to a short drive before running the same commands:
 
 ```powershell
@@ -106,6 +108,7 @@ subst M: 'E:\AAAAAAAAAAAAAAAAAAAAAA\2026.10\10月黑客松\xiaobai\moontogeojson
 moon -C M:\ test --target native
 moon -C M:\ run cmd/main --target native
 $env:MOONTOGEOJSON_MOON_ROOT='M:\'
+node tools/smoke-cli.mjs
 node tools/compare-upstream.mjs
 ```
 
