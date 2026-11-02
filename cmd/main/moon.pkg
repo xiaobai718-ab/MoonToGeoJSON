@@ -1,0 +1,5 @@
+import {
+  "xiaobai718-ab/moontogeojson" @lib,
+}
+
+pkgtype(kind: "executable")

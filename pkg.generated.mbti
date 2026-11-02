@@ -1,0 +1,19 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "xiaobai718-ab/moontogeojson"
+
+// Values
+pub fn gpx(String) -> Json raise
+
+pub fn kml(String, skip_null_geometry? : Bool) -> Json raise
+
+pub fn kml_with_folders(String, skip_null_geometry? : Bool) -> Json raise
+
+pub fn tcx(String) -> Json raise
+
+// Errors
+
+// Types and methods
+
+// Type aliases
+
+// Traits

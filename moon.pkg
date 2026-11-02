@@ -1,0 +1,8 @@
+import {
+  "Milky2018/xml",
+  "moonbitlang/core/string",
+}
+
+import {
+  "moonbitlang/core/json",
+} for "wbtest"
