@@ -67,6 +67,16 @@ moon test --target js
 moon check --target wasm-gc
 ```
 
+On Windows, the current `moonc` can fail to create output in very long paths. If your checkout is in a long path, map the project to a short drive before running the same commands:
+
+```powershell
+subst M: 'E:\AAAAAAAAAAAAAAAAAAAAAA\2026.10\10月黑客松\xiaobai\moontogeojson'
+moon -C M:\ test --target native
+moon -C M:\ run cmd/main --target native
+```
+
+Replace the path and drive letter as needed. The mapping does not move project files.
+
 The `.upstream` directory is an ignored local reference checkout and is not required to build. The port currently returns complete `Json` collections; the upstream JavaScript iterator API is not present. The full upstream fixture corpus has not yet been verified for exact parity. Check the tests and commit history for the implemented behavior; do not assume byte-for-byte parity for every upstream fixture yet.
 
 ## License and attribution
