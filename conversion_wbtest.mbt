@@ -199,3 +199,30 @@ test "generators match collection APIs" {
   let skip_source = "<kml><Placemark/><Placemark><Point><coordinates>1,2</coordinates></Point></Placemark></kml>"
   assert_eq(kml_gen(skip_source, skip_null_geometry=true).collect().length(), 1)
 }
+
+///|
+test "KML mixed geometry and XML text decoding" {
+  let source = "<kml><Placemark><name>A &amp; B</name><description><![CDATA[<b>hi</b>]]></description><MultiGeometry><Point><coordinates>1,2</coordinates></Point><LineString><coordinates>1,2 3,4</coordinates></LineString></MultiGeometry></Placemark></kml>"
+  let expected = @json.parse(
+    "{\"type\":\"FeatureCollection\",\"features\":[{\"type\":\"Feature\",\"properties\":{\"name\":\"A & B\",\"description\":{\"@type\":\"html\",\"value\":\"<b>hi</b>\"}},\"geometry\":{\"type\":\"GeometryCollection\",\"geometries\":[{\"type\":\"Point\",\"coordinates\":[1,2]},{\"type\":\"LineString\",\"coordinates\":[[1,2],[3,4]]}]}}]}",
+  )
+  assert_eq(kml(source), expected)
+}
+
+///|
+test "GPX rejects incomplete tracks but keeps valid waypoints" {
+  let source = "<gpx><trk><trkseg><trkpt lon='1' lat='2'/><trkpt lon='bad' lat='4'/></trkseg></trk><wpt lon='5' lat='6'/></gpx>"
+  let expected = @json.parse(
+    "{\"type\":\"FeatureCollection\",\"features\":[{\"type\":\"Feature\",\"properties\":{},\"geometry\":{\"type\":\"Point\",\"coordinates\":[5,6]}}]}",
+  )
+  assert_eq(gpx(source), expected)
+}
+
+///|
+test "TCX combines valid lap tracks into one MultiLineString" {
+  let source = "<TrainingCenterDatabase><Lap><Track><Trackpoint><Position><LongitudeDegrees>1</LongitudeDegrees><LatitudeDegrees>2</LatitudeDegrees></Position></Trackpoint><Trackpoint><Position><LongitudeDegrees>3</LongitudeDegrees><LatitudeDegrees>4</LatitudeDegrees></Position></Trackpoint></Track><Track><Trackpoint><Position><LongitudeDegrees>5</LongitudeDegrees><LatitudeDegrees>6</LatitudeDegrees></Position></Trackpoint><Trackpoint><Position><LongitudeDegrees>7</LongitudeDegrees><LatitudeDegrees>8</LatitudeDegrees></Position></Trackpoint></Track></Lap></TrainingCenterDatabase>"
+  let expected = @json.parse(
+    "{\"type\":\"FeatureCollection\",\"features\":[{\"type\":\"Feature\",\"properties\":{},\"geometry\":{\"type\":\"MultiLineString\",\"coordinates\":[[[1,2],[3,4]],[[5,6],[7,8]]]}}]}",
+  )
+  assert_eq(tcx(source), expected)
+}
