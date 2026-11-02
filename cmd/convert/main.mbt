@@ -1,31 +1,39 @@
 ///|
 /// Convert one local file to GeoJSON on stdout.
 /// Usage: moon run cmd/convert --target native -- kml|gpx|tcx|kml-folders file
+suberror CliError {
+  InvalidInput(String)
+} derive(Debug)
+
+///|
+impl Show for CliError with fn output(self, logger) {
+  let InvalidInput(message) = self
+  logger <+ "\{message}"
+}
+
+///|
 async fn main {
   let args = @env.args()
   if args.length() < 3 {
-    println("Usage: moontogeojson kml|gpx|tcx|kml-folders FILE")
-    return
-  }
-  let source = @fs.read_file(args[2]).text() catch {
-    _ => {
-      println("Could not read input file")
-      return
-    }
+    raise InvalidInput(
+      "Usage: moontogeojson kml|gpx|tcx|kml-folders|kml-folders-skip FILE",
+    )
   }
   if args[1] != "kml" &&
     args[1] != "gpx" &&
     args[1] != "tcx" &&
     args[1] != "kml-folders" &&
     args[1] != "kml-folders-skip" {
-    println("Unknown format: " + args[1])
-    return
+    raise InvalidInput("Unknown format: " + args[1])
+  }
+  let source = @fs.read_file(args[2]).text() catch {
+    err =>
+      raise InvalidInput(
+        "Could not read input file: " + args[2] + ": " + err.to_string(),
+      )
   }
   let output = convert(args[1], source) catch {
-    _ => {
-      println("Invalid XML")
-      return
-    }
+    err => raise InvalidInput("Conversion failed: " + err.to_string())
   }
   println(output.stringify())
 }
