@@ -13,7 +13,7 @@ fn kml_color(
   if value.length() == 3 || value.length() == 6 {
     properties.set(key, json_string("#" + value))
   } else if value.length() == 8 {
-    let alpha = @string.parse_int(value[0:2], base=16) catch { _ => return }
+    let alpha = @string.parse_int(value[0:2], radix=16) catch { _ => return }
     properties.set(prefix + "-opacity", json_number(alpha.to_double() / 255.0))
     properties.set(
       key,

@@ -19,7 +19,7 @@ pub fn kml_gen(
     nodes.push((2, node))
   }
   let mut index = 0
-  Iter::new(fn() {
+  Iter(fn() {
     while index < nodes.length() {
       let (kind, node) = nodes[index]
       index += 1
@@ -51,7 +51,7 @@ pub fn gpx_gen(source : String) -> Iter[Json] raise {
     nodes.push((2, node))
   }
   let mut index = 0
-  Iter::new(fn() {
+  Iter(fn() {
     while index < nodes.length() {
       let (kind, node) = nodes[index]
       index += 1
@@ -76,7 +76,7 @@ pub fn tcx_gen(source : String) -> Iter[Json] raise {
   nodes.append(document.descendants("Lap"))
   nodes.append(document.descendants("Courses"))
   let mut index = 0
-  Iter::new(fn() {
+  Iter(fn() {
     while index < nodes.length() {
       let node = nodes[index]
       index += 1

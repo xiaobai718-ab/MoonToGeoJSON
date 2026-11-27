@@ -1,9 +1,10 @@
 ///|
 /// Convert one local file to GeoJSON on stdout.
 /// Usage: moon run cmd/convert --target native -- [kml|gpx|tcx|kml-folders] file
+#derive(Debug)
 suberror CliError {
   InvalidInput(String)
-} derive(Debug)
+}
 
 ///|
 impl Show for CliError with fn output(self, logger) {

@@ -6,7 +6,7 @@ The library accepts XML text and returns MoonBit `Json` values. The KML API supp
 
 ## Requirements
 
-- MoonBit compiler `moonc` 0.10.16 or newer
+- MoonBit compiler `moonc` 1.0.0-rc1 or newer (the November hackathon acceptance minimum)
 - Internet access for the first `moon update` to fetch `Milky2018/xml@0.6.1` and `moonbitlang/async@0.22.4` (the latter is used by the native file CLI)
 
 ## Install
@@ -81,12 +81,9 @@ Malformed XML raises an XML parser error. Invalid or incomplete geospatial coord
 
 ```sh
 moon update
-moon check --target native
-moon build --target native
-moon test --target native
-moon check --target js
-moon test --target js
-moon check --target wasm-gc
+moon check --target all --deny-warn
+moon build --target all --deny-warn
+moon test --target all --deny-warn
 ```
 
 To rerun the upstream v7.1.3 parity suite (62 fixtures and 132 snapshots), clone the reference source into the ignored `.upstream` directory and run:
