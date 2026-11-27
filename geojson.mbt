@@ -44,6 +44,60 @@ fn geo_multi_line(lines : Array[Json]) -> Json {
 }
 
 ///|
+/// Only emit fields with at least one value. Each column follows the
+/// retained positions and uses null where a measurement is absent.
+fn track_columns(samples : Array[Map[String, Json]]) -> Map[String, Json] {
+  let columns : Map[String, Array[Json]] = Map([])
+  for index, sample in samples {
+    for key, value in sample {
+      let column = match columns.get(key) {
+        Some(column) => column
+        None => {
+          let column = Array::make(samples.length(), Json::null())
+          columns.set(key, column)
+          column
+        }
+      }
+      column[index] = value
+    }
+  }
+  let result = object()
+  for key, column in columns {
+    result.set(key, Json::array(column))
+  }
+  result
+}
+
+///|
+fn merge_track_columns(
+  lines : Array[Json],
+  columns : Array[Map[String, Json]],
+) -> Map[String, Json] {
+  let result = object()
+  if lines.length() == 1 {
+    return columns[0]
+  }
+  for segment in columns {
+    for key, _ in segment {
+      if result.get(key) is None {
+        let values = []
+        for index, line in lines {
+          let value = match (columns[index].get(key), line) {
+            (Some(value), _) => value
+            (None, Array(points)) =>
+              Json::array(Array::make(points.length(), Json::null()))
+            _ => Json::array([])
+          }
+          values.push(value)
+        }
+        result.set(key, Json::array(values))
+      }
+    }
+  }
+  result
+}
+
+///|
 fn geo_polygon(rings : Array[Json]) -> Json {
   Json::object({
     "type": json_string("Polygon"),

@@ -54,6 +54,7 @@ function differences(left, right, location = '$', output = []) {
 }
 
 let matches = 0;
+let corrected = 0;
 const failures = [];
 for (const name of fs.readdirSync(fixtureDir).filter(file => /\.(kml|gpx|tcx)$/.test(file)).sort()) {
   const cases = path.extname(name) === '.kml'
@@ -65,6 +66,19 @@ for (const name of fs.readdirSync(fixtureDir).filter(file => /\.(kml|gpx|tcx)$/.
       failures.push(`${name}#${index}: no snapshot`);
       continue;
     }
+    const usesCorrectedAlignment = name === 'garmin_connect.tcx' && index === '1';
+    if (usesCorrectedAlignment) {
+      // Trackpoint 309 (zero based) has no Position. Upstream omits it from
+      // geometry but leaves its slot in the cadence, speed, and power arrays.
+      const { geometry, properties } = oracle.features[0];
+      for (const field of ['cadences', 'speeds', 'watts']) {
+        const samples = properties[field];
+        if (samples.length !== geometry.coordinates.length + 1 || samples[309] !== null) {
+          throw new Error(`Unexpected upstream alignment in ${name}: ${field}`);
+        }
+        samples.splice(309, 1);
+      }
+    }
     let actual;
     try {
       const raw = execFileSync(moon, ['-C', moonRoot, 'run', 'cmd/convert', '--target', 'native', '--', kind, path.join(fixtureDir, name)], { encoding: 'utf8', maxBuffer: 50 * 1024 * 1024 });
@@ -75,10 +89,11 @@ for (const name of fs.readdirSync(fixtureDir).filter(file => /\.(kml|gpx|tcx)$/.
     }
     const diff = differences(oracle, actual);
     if (diff.length) failures.push(`${name}#${index}:\n  ${diff.join('\n  ')}`);
+    else if (usesCorrectedAlignment) corrected++;
     else matches++;
   }
 }
 
-console.log(`${matches}/${expected.size} upstream GeoJSON snapshots match`);
+console.log(`${matches} unchanged + ${corrected} with corrected sample alignment (${expected.size} upstream snapshots)`);
 for (const failure of failures) console.log(failure);
-if (failures.length) process.exitCode = 1;
+if (failures.length || matches + corrected !== expected.size) process.exitCode = 1;

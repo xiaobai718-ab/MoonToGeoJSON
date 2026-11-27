@@ -77,6 +77,12 @@ The public conversion functions are:
 
 Malformed XML raises an XML parser error. Invalid or incomplete geospatial coordinates are omitted; KML placemarks without valid geometry have `geometry: null` unless `skip_null_geometry=true`.
 
+In 0.1.1, each time, heart rate, or extension array for GPX tracks and TCX
+laps follows the output coordinates and segment boundaries. Missing measurements are
+`null` when the field has at least one value. Trackpoints omitted from the
+geometry have no slot in these arrays. KML `SchemaData` resolves local
+`schemaUrl` references by ID, so separate schemas can define the same field name.
+
 ## Develop
 
 ```sh
@@ -94,7 +100,10 @@ moon build --target native
 node tools/compare-upstream.mjs
 ```
 
-The comparison covers GeoJSON collections and both KML folder modes. It is also part of CI. The current result is **132/132 matching snapshots**.
+CI compares GeoJSON collections and both KML folder modes. **131 snapshots**
+match upstream exactly. In `garmin_connect.tcx`, CI verifies the upstream result
+with one deliberate correction: the cadence, speed, and power arrays omit the empty
+slot for the trackpoint that has no position.
 
 The smaller `node tools/smoke-cli.mjs` check runs the included files through the native CLI and verifies success output and failure exit codes. CI runs it before the upstream comparison.
 

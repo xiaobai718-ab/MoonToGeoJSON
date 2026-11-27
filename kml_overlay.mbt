@@ -53,7 +53,7 @@ fn kml_box(box : XmlNode) -> (Json, Json)? {
 fn kml_ground_overlay(
   node : XmlNode,
   styles : Map[String, Map[String, Json]],
-  schema : Map[String, String],
+  schema : KmlSchemas,
   skip_null_geometry : Bool,
 ) -> Json? {
   let mut geometry = Json::null()
@@ -85,7 +85,7 @@ fn kml_ground_overlay(
 fn kml_network_link(
   node : XmlNode,
   styles : Map[String, Map[String, Json]],
-  schema : Map[String, String],
+  schema : KmlSchemas,
   skip_null_geometry : Bool,
 ) -> Json? {
   let mut geometry = Json::null()
@@ -127,7 +127,7 @@ fn kml_network_link(
 fn kml_folder_children(
   node : XmlNode,
   styles : Map[String, Map[String, Json]],
-  schema : Map[String, String],
+  schema : KmlSchemas,
   skip_null_geometry : Bool,
 ) -> Array[Json] {
   let result : Array[Json] = []
@@ -136,14 +136,14 @@ fn kml_folder_children(
       "Folder" => {
         let meta = object()
         for field in child.children {
-          match field.name {
+          let name = local_name(field.name)
+          match name {
             "name"
             | "visibility"
             | "open"
             | "address"
             | "description"
-            | "phoneNumber" =>
-              meta.set(field.name, json_string(field.text_content()))
+            | "phoneNumber" => meta.set(name, json_string(field.text_content()))
             _ => ()
           }
         }

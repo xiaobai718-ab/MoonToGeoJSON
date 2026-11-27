@@ -16,68 +16,47 @@ fn tcx_position(node : XmlNode) -> Json? {
 }
 
 ///|
-fn tcx_track(
-  node : XmlNode,
-) -> (Array[Json], Array[Json], Array[Json], Map[String, Json]) {
+fn tcx_track(node : XmlNode) -> (Array[Json], Map[String, Json]) {
   let positions : Array[Json] = []
-  let times : Array[Json] = []
-  let hearts : Array[Json] = []
-  let extended : Map[String, Array[Json]] = Map([])
-  let points = node.descendants("Trackpoint")
-  for index, point in points {
+  let samples : Array[Map[String, Json]] = []
+  for point in node.descendants("Trackpoint") {
     if tcx_position(point) is Some(position) {
       positions.push(position)
-      if point.value("Time") is Some(value) {
-        times.push(json_string(value))
+      let values = object()
+      if point.value("Time") is Some(value) && value != "" {
+        values.set("times", json_string(value))
       }
-      if point.number("Value") is Some(value) {
-        hearts.push(json_number(value))
+      if point.first("HeartRateBpm") is Some(heart) {
+        if heart.number("Value") is Some(value) {
+          values.set("heart", json_number(value))
+        }
       }
       for
         (tag, field) in [
+          ("heartRate", "heartRates"),
           ("Cadence", "cadences"),
           ("Speed", "speeds"),
           ("Watts", "watts"),
         ] {
         if point.number(tag) is Some(value) {
-          if extended.get(field) is None {
-            let blank : Array[Json] = []
-            for _ in points {
-              blank.push(Json::null())
-            }
-            extended.set(field, blank)
-          }
-          if extended.get(field) is Some(items) {
-            items[index] = json_number(value)
-          }
+          values.set(field, json_number(value))
         }
       }
+      samples.push(values)
     }
   }
-  let extended_json = object()
-  for field, values in extended {
-    extended_json.set(field, Json::array(values))
-  }
-  (positions, times, hearts, extended_json)
+  (positions, track_columns(samples))
 }
 
 ///|
 fn tcx_lap(node : XmlNode) -> Json? {
   let lines : Array[Json] = []
-  let all_times : Array[Json] = []
-  let all_hearts : Array[Json] = []
-  let all_extended : Array[Map[String, Json]] = []
+  let columns : Array[Map[String, Json]] = []
   for track in node.descendants("Track") {
-    let (positions, times, hearts, extended) = tcx_track(track)
+    let (positions, values) = tcx_track(track)
     if positions.length() >= 2 {
       lines.push(Json::array(positions))
-      all_extended.push(extended)
-      if !times.is_empty() {
-        all_times.push(Json::array(times))
-      }
-      if !hearts.is_empty() {
-        all_hearts.push(Json::array(hearts))
-      }
+      columns.push(values)
     }
   }
   if lines.is_empty() {
@@ -102,48 +81,15 @@ fn tcx_lap(node : XmlNode) -> Json? {
       properties.set(output_name, json_number(value))
     }
   }
-  for extended in all_extended {
-    for field, value in extended {
-      if lines.length() == 1 {
-        properties.set(field, value)
-      } else if properties.get(field) is None {
-        let segments : Array[Json] = []
-        for index in 0..<all_extended.length() {
-          match all_extended[index].get(field) {
-            Some(items) => segments.push(items)
-            None => {
-              let blank : Array[Json] = []
-              if lines[index] is Array(points) {
-                for _ in points {
-                  blank.push(Json::null())
-                }
-              }
-              segments.push(Json::array(blank))
-            }
-          }
-        }
-        properties.set(field, Json::array(segments))
-      }
+  let coordinate_properties = object()
+  for field, values in merge_track_columns(lines, columns) {
+    if field == "times" || field == "heart" {
+      coordinate_properties.set(field, values)
+    } else {
+      properties.set(field, values)
     }
   }
-  if !all_times.is_empty() || !all_hearts.is_empty() {
-    let coordinate_properties = object()
-    if !all_times.is_empty() {
-      let values = if lines.length() == 1 {
-        all_times[0]
-      } else {
-        Json::array(all_times)
-      }
-      coordinate_properties.set("times", values)
-    }
-    if !all_hearts.is_empty() {
-      let values = if lines.length() == 1 {
-        all_hearts[0]
-      } else {
-        Json::array(all_hearts)
-      }
-      coordinate_properties.set("heart", values)
-    }
+  if !coordinate_properties.is_empty() {
     properties.set("coordinateProperties", Json::object(coordinate_properties))
   }
   let geometry = if lines.length() == 1 {

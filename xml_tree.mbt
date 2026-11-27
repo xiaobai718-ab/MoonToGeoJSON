@@ -4,6 +4,7 @@
 priv struct XmlNode {
   name : String
   attrs : Map[String, String]
+  namespace_uri : String?
   children : Array[XmlNode]
   mut text : String
   mut all_text : String
@@ -12,10 +13,15 @@ priv struct XmlNode {
 }
 
 ///|
-fn xml_node(name : String, attrs : Map[String, String]) -> XmlNode {
+fn xml_node(
+  name : String,
+  attrs : Map[String, String],
+  namespace_uri : String?,
+) -> XmlNode {
   {
     name,
     attrs,
+    namespace_uri,
     children: [],
     text: "",
     all_text: "",
@@ -26,7 +32,7 @@ fn xml_node(name : String, attrs : Map[String, String]) -> XmlNode {
 
 ///|
 fn parse_xml(source : String) -> XmlNode raise {
-  let root = xml_node("#document", {})
+  let root = xml_node("#document", {}, None)
   let stack : Array[XmlNode] = [root]
   let reader = @xml.Reader::from_string(source)
   while true {
@@ -37,7 +43,8 @@ fn parse_xml(source : String) -> XmlNode raise {
         for attribute in element.attributes {
           attrs.set(attribute.name, attribute.value)
         }
-        let node = xml_node(element.name, attrs)
+        let namespace_uri = xml_prefix_namespace(element.name, attrs, stack)
+        let node = xml_node(element.name, attrs, namespace_uri)
         stack[stack.length() - 1].children.push(node)
         match event.kind {
           @xml.Start(_) => stack.push(node)
@@ -66,6 +73,25 @@ fn parse_xml(source : String) -> XmlNode raise {
     }
   }
   root
+}
+
+///|
+fn xml_prefix_namespace(
+  name : String,
+  attrs : Map[String, String],
+  stack : Array[XmlNode],
+) -> String? {
+  guard name.split_once(":") is Some((prefix, _)) else { return None }
+  let declaration = "xmlns:" + prefix.to_owned()
+  if attrs.get(declaration) is Some(uri) {
+    return Some(uri)
+  }
+  for index = stack.length() - 1; index >= 0; index = index - 1 {
+    if stack[index].attr(declaration) is Some(uri) {
+      return Some(uri)
+    }
+  }
+  None
 }
 
 ///|

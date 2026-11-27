@@ -117,14 +117,33 @@ fn kml_style_map(document : XmlNode) -> Map[String, Map[String, Json]] {
 }
 
 ///|
-fn kml_schema(document : XmlNode) -> Map[String, String] {
-  let schema : Map[String, String] = Map([])
-  for field in document.descendants("SimpleField") {
-    if field.attr("name") is Some(name) {
-      schema.set(name, field.attr("type").unwrap_or("string"))
+priv struct KmlSchemas {
+  by_reference : Map[String, Map[String, String]]
+  unqualified : Map[String, String]
+}
+
+///|
+fn kml_schema(document : XmlNode) -> KmlSchemas {
+  let by_reference = Map([])
+  let unqualified = Map([])
+  for schema in document.descendants("Schema") {
+    let fields : Map[String, String] = Map([])
+    for field in schema.children {
+      if local_name(field.name) == "SimpleField" &&
+        field.attr("name") is Some(name) {
+        let kind = field.attr("type").unwrap_or("string")
+        fields.set(name, kind)
+        match unqualified.get(name) {
+          Some(previous) if previous != kind => unqualified.set(name, "string")
+          _ => unqualified.set(name, kind)
+        }
+      }
+    }
+    if schema.attr("id") is Some(id) {
+      by_reference.set("#" + id, fields)
     }
   }
-  schema
+  { by_reference, unqualified, }
 }
 
 ///|
@@ -144,7 +163,7 @@ fn kml_schema_value(value : String, kind : String) -> Json {
 fn kml_properties(
   node : XmlNode,
   styles : Map[String, Map[String, Json]],
-  schema : Map[String, String],
+  schema : KmlSchemas,
 ) -> Map[String, Json] {
   let properties = object()
   put_text_fields(properties, node, [
@@ -183,15 +202,19 @@ fn kml_properties(
       let name = data.attr("name").unwrap_or("")
       properties.set(name, json_string(data.value("value").unwrap_or("")))
     }
-    for data in extended.descendants("SimpleData") {
-      let name = data.attr("name").unwrap_or("")
-      properties.set(
-        name,
-        kml_schema_value(
-          data.text_content(),
-          schema.get(name).unwrap_or("string"),
-        ),
-      )
+    for group in extended.descendants("SchemaData") {
+      let fields = match group.attr("schemaUrl") {
+        Some(reference) if reference != "" =>
+          schema.by_reference.get(reference.trim().to_owned())
+        _ => Some(schema.unqualified)
+      }
+      for data in group.children {
+        if local_name(data.name) == "SimpleData" {
+          let name = data.attr("name").unwrap_or("")
+          let kind = fields.bind(map => map.get(name)).unwrap_or("string")
+          properties.set(name, kml_schema_value(data.text_content(), kind))
+        }
+      }
     }
   }
   if node.first("TimeSpan") is Some(span) {
@@ -210,7 +233,7 @@ fn kml_properties(
 fn kml_placemark(
   node : XmlNode,
   styles : Map[String, Map[String, Json]],
-  schema : Map[String, String],
+  schema : KmlSchemas,
   skip_null_geometry : Bool,
 ) -> Json? {
   let times : Array[Json] = []
