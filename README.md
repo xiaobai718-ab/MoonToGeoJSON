@@ -12,10 +12,10 @@ The library accepts XML text and returns MoonBit `Json` values. The KML API supp
 ## Install
 
 ```sh
-moon add xiaobai718-ab/moontogeojson
+moon add xiaobai718-ab/moontogeojson@0.1.0
 ```
 
-Until the Mooncakes release is available, clone this repository and run `moon update` from its root. The public Mooncakes name in `moon.mod` is reserved for publication; a release is not claimed here.
+Version 0.1.0 is [published on Mooncakes](https://mooncakes.io/docs/xiaobai718-ab/moontogeojson@0.1.0). To build from source instead, clone this repository and run `moon update` from its root.
 
 ## Use
 
